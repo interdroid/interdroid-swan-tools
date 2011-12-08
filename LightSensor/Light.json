@@ -7,16 +7,16 @@
    "class": "ListPreference",
    "type": "int",
    "default": "SensorManager.SENSOR_DELAY_NORMAL",
-   "android:entries": "@array/light_accuracy",
-   "android:entryValues": "@array/light_accuracy_values",
+   "android:entries": "@array/accuracy",
+   "android:entryValues": "@array/accuracy_values",
    "android:summary": "Select an Accuracy",
    "android:title": "Sensor Accuracy"
  }],
  "valuePaths": [{"name":"lux", "type":"double"}],
  "values": [
-  {"name": "light_accuracy", "type": "string-array",
+  {"name": "accuracy", "type": "string-array",
    "items": ["Fastest", "Game", "UI", "Normal"]},
-  {"name": "light_accuracy_values",
+  {"name": "accuracy_values",
    "type": "integer-array", "items": [0, 1, 2, 3]
  }]
 }
