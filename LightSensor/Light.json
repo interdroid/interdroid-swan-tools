@@ -14,9 +14,19 @@
    "android:title": "Sensor Accuracy"
   }
  ],
- "values": [
+ "valuePaths": [
   {"name":"lux", 
    "type":"double"
+  }
+ ],
+ "values": [
+  {"name": "light_accuracy",
+   "type": "string-array",
+   "items": ["Fastest", "Game", "UI", "Normal"]
+  },
+  {"name": "light_accuracy_values",
+   "type": "integer-array",
+   "items": [0, 1, 2, 3]
   }
  ]
 }
