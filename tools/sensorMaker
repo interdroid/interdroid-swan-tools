@@ -1,0 +1,6 @@
+#!/bin/sh
+
+DIR=`dirname $0`
+JAVA=/usr/bin/java
+
+$JAVA -classpath $DIR/../bin interdroid.contextdroid.tool.SensorMaker $*
