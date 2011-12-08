@@ -75,7 +75,7 @@ public class SensorMaker {
 	private static final String MANIFEST_FILE = "AndroidManifest.xml";
 	private static final String PREFS_FILE_EXTENSION = "_preferences.xml";
 	private static final String ARRAYS_FILE = "_values.xml";
-	private static final String SENSOR_FILE_EXTENSION = "Sensor.class";
+	private static final String SENSOR_FILE_EXTENSION = "Sensor.java";
 	private static final String BACKUP_EXTENSION = ".bak";
 
 	private static final int MIN_ARGS = 1;
@@ -85,10 +85,12 @@ public class SensorMaker {
 	private static final String NAMESPACE = "namespace";
 	private static final String NAME = "name";
 	private static final String CLASS = "class";
-	private static final String VALUES = "values";
+	private static final String VALUE_PATHS = "valuePaths";
 	private static final String DOC = "doc";
 	private static final String AUTHOR = "author";
 	private static final String TYPE = "type";
+	private static final String VALUES = "values";
+	private static final String ITEMS = "items";
 
 	public static void main(String[] args) {
 		if (args.length < MIN_ARGS || args.length > MAX_ARGS) {
@@ -163,7 +165,7 @@ public class SensorMaker {
 
 		File arrays;
 		try {
-			arrays = new File(valuesDir.getPath()  + File.separator + schema.getString(NAME) + ARRAYS_FILE);
+			arrays = new File(valuesDir.getPath()  + File.separator + schema.getString(NAME).toLowerCase() + ARRAYS_FILE);
 			generateArrays(schema, arrays);
 		} catch (JSONException e) {
 			usage(ERR_NO_NAME, e.getMessage());
@@ -171,7 +173,7 @@ public class SensorMaker {
 
 		File prefs = null;
 		try {
-			prefs = new File(xmlDir + File.separator + schema.getString(NAME)+ PREFS_FILE_EXTENSION);
+			prefs = new File(xmlDir + File.separator + schema.getString(NAME).toLowerCase()+ PREFS_FILE_EXTENSION);
 		} catch (JSONException e) {
 			usage(ERR_NO_NAME, e.getMessage());
 		}
@@ -203,11 +205,7 @@ public class SensorMaker {
 			contents.append("\nimport interdroid.contextdroid.sensors.AbstractVdbSensor;");
 			contents.append("\nimport interdroid.vdb.content.avro.AvroContentProviderProxy;");
 			contents.append("\n");
-			contents.append("\nimport android.content.BroadcastReceiver;");
 			contents.append("\nimport android.content.ContentValues;");
-			contents.append("\nimport android.content.Context;");
-			contents.append("\nimport android.content.Intent;");
-			contents.append("\nimport android.content.IntentFilter;");
 			contents.append("\nimport android.os.Bundle;");
 			contents.append("\n");
 			contents.append("\n/**");
@@ -239,7 +237,7 @@ public class SensorMaker {
 			contents.append("\n\t\t@Override");
 			contents.append("\n\t\tpublic final int getPreferencesXML() {");
 			contents.append("\n\t\t\treturn R.xml.");
-			contents.append(schema.getString(NAME));
+			contents.append(schema.getString(NAME).toLowerCase());
 			contents.append("_preferences;");
 			contents.append("\n\t\t}");
 			contents.append("\n");
@@ -247,7 +245,7 @@ public class SensorMaker {
 			contents.append("\n");
 
 			// Declare constants for all the fields.
-			JSONArray fields = schema.getJSONArray(VALUES);
+			JSONArray fields = schema.getJSONArray(VALUE_PATHS);
 			for (int i = 0; i < fields.length(); i++) {
 				JSONObject field = fields.getJSONObject(i);
 
@@ -319,7 +317,7 @@ public class SensorMaker {
 
 			contents.append("\n\t\t\t+ \"\\n]\"");
 			contents.append("\n\t\t\t+ \"}\";");
-			contents.append("\n\t\treturn scheme.replace('\'', '\"');");
+			contents.append("\n\t\treturn scheme.replace('\\'', '\"');");
 			contents.append("\n\t}");
 			contents.append("\n");
 
@@ -359,7 +357,7 @@ public class SensorMaker {
 			contents.append("\n\t\t/* Perform sensor specific sensor setup. */");
 			contents.append("\n\t}");
 			contents.append("\n");
-			contents.append("\n@Override");
+			contents.append("\n\t@Override");
 			contents.append("\n\tpublic final void register(final String id, final String valuePath,");
 			contents.append("\n\t\tfinal Bundle configuration) {");
 			contents.append("\n\t\tif (registeredConfigurations.size() == 1) {");
@@ -498,19 +496,59 @@ public class SensorMaker {
 							"\n" +
 							"    <!-- " + schema.getString(NAME) + " sensor -->" + "\n" +
 							"    <string-array name=\"" + schema.getString(NAME) + "_valuepaths\">" + "\n";
+			String close =
+					"    </string-array>\n\n";
+
 			String footer =
-					"    </string-array>" + "\n" +
-							"</resources>";
+					 "\n</resources>";
 			String itemOpen = "        <item>";
 			String itemClose = "</item>" + "\n";
 
 			file.write(header.getBytes());
-			JSONArray fields = schema.getJSONArray(VALUES);
+			JSONArray fields = schema.getJSONArray(VALUE_PATHS);
 			for (int i = 0; i < fields.length(); i++) {
 				JSONObject field = fields.getJSONObject(i);
 				file.write(itemOpen.getBytes());
 				file.write(field.getString(NAME).getBytes());
 				file.write(itemClose.getBytes());
+			}
+
+			file.write(close.getBytes());
+
+			if (schema.has(VALUES)) {
+				JSONArray values = schema.getJSONArray(VALUES);
+				for (int i = 0; i < values.length(); i++) {
+					JSONObject value = values.getJSONObject(i);
+					file.write("    <!-- ".getBytes());
+					file.write(value.getString(NAME).getBytes());
+					file.write(" -->\n".getBytes());
+					String type = value.getString(TYPE);
+					if (type.equals("string-array")) {
+						file.write("    <string-array name=\"".getBytes());
+						file.write(value.getString(NAME).getBytes());
+						file.write("\" >\n".getBytes());
+						JSONArray items = value.getJSONArray(ITEMS);
+						for (int j = 0; j < items.length(); j++) {
+							file.write(itemOpen.getBytes());
+							file.write(items.getString(j).getBytes());
+							file.write(itemClose.getBytes());
+						}
+						file.write("    </string-array>\n\n".getBytes());
+					} else if (type.equals("integer-array")) {
+						file.write("    <integer-array name=\"".getBytes());
+						file.write(value.getString(NAME).getBytes());
+						file.write("\" >\n".getBytes());
+						JSONArray items = value.getJSONArray(ITEMS);
+						for (int j = 0; j < items.length(); j++) {
+							file.write(itemOpen.getBytes());
+							file.write(String.valueOf(items.getInt(j)).getBytes());
+							file.write(itemClose.getBytes());
+						}
+						file.write("    </integer-array>\n\n".getBytes());
+					} else {
+						throw new IllegalArgumentException("Unsupported values type: " + type);
+					}
+				}
 			}
 
 			file.write(footer.getBytes());
@@ -538,7 +576,7 @@ public class SensorMaker {
 			// Start the application
 			contents.append("\n\t<application");
 			contents.append("\n\tandroid:debuggable=\"true\"");
-			contents.append("\n\tandroid:icon=\"@drawable/icon\"");
+			contents.append("\n\tandroid:icon=\"@drawable/ic_launcher\"");
 			contents.append("\n\tandroid:label=\"@string/app_name\" >");
 
 			contents.append("\n");
@@ -570,9 +608,9 @@ public class SensorMaker {
 			// Include the valuePaths meta-data
 			contents.append("\n\t\t\t\t<meta-data");
 			contents.append("\n\t\t\t\t\tandroid:name=\"valuePaths\"");
-			contents.append("android:value=\"");
+			contents.append("\n\t\t\t\t\tandroid:value=\"");
 
-			JSONArray fields = schema.getJSONArray(VALUES);
+			JSONArray fields = schema.getJSONArray(VALUE_PATHS);
 			boolean first = true;
 			for (int i = 0; i < fields.length(); i++) {
 				if (!first && i < fields.length() - 1) {
