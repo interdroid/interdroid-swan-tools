@@ -91,6 +91,7 @@ public class SensorMaker {
 	private static final String TYPE = "type";
 	private static final String VALUES = "values";
 	private static final String ITEMS = "items";
+	private static final String DEFAULT = "default";
 
 	public static void main(String[] args) {
 		if (args.length < MIN_ARGS || args.length > MAX_ARGS) {
@@ -244,6 +245,28 @@ public class SensorMaker {
 			contents.append("\n\t}");
 			contents.append("\n");
 
+			// Declare constants for all the configs.
+			if (schema.has(CONFIGS)) {
+				if (schema.has(CONFIGS)) {
+					JSONArray configs = schema.getJSONArray(CONFIGS);
+					for (int i = 0; i < configs.length(); i++) {
+						JSONObject config = configs.getJSONObject(i);
+
+						contents.append("\n\t/**");
+						contents.append("\n\t* The ");
+						contents.append(config.getString(NAME));
+						contents.append(" configuration.");
+						contents.append("\n\t*/");
+						contents.append("\n\tpublic static final String ");
+						contents.append(config.getString(NAME).toUpperCase());
+						contents.append("_CONFIG = \"");
+						contents.append(config.getString(NAME));
+						contents.append("\";");
+						contents.append("\n");
+					}
+				}
+			}
+
 			// Declare constants for all the fields.
 			JSONArray fields = schema.getJSONArray(VALUE_PATHS);
 			for (int i = 0; i < fields.length(); i++) {
@@ -343,7 +366,26 @@ public class SensorMaker {
 			contents.append("\n");
 			contents.append("\n\t@Override");
 			contents.append("\n\tpublic void initDefaultConfiguration(final Bundle defaults) {");
-			// Setup default configuration
+
+			// Setup default configurations
+			if (schema.has(CONFIGS)) {
+				JSONArray configs = schema.getJSONArray(CONFIGS);
+				for (int i = 0; i < configs.length(); i++) {
+					JSONObject config = configs.getJSONObject(i);
+					if (config.has(DEFAULT)) {
+						contents.append("\n\t\tdefaults.put");
+						contents.append(config.getString(TYPE).substring(0,1).toUpperCase());
+						contents.append(config.getString(TYPE).substring(1));
+						contents.append("(");
+						contents.append(config.getString(NAME).toUpperCase());
+						contents.append("_CONFIG");
+						contents.append(", ");
+						contents.append(config.getString(DEFAULT));
+						contents.append(");");
+					}
+				}
+
+			}
 
 			contents.append("\n\t}");
 			contents.append("\n");
