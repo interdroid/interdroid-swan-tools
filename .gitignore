@@ -1,0 +1,5 @@
+.settings
+bin/
+LightSensor/AndroidManifest.xml
+LightSensor/res/
+LightSensor/src/

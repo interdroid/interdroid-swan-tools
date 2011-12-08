@@ -1,0 +1,22 @@
+{"name": "Light",
+ "namespace": "interdroid.contextdroid.sensor.impl",
+ "doc": "A sensor for the ambient light level, measured in lux.",
+ "author": "nick &lt;palmer@cs.vu.nl&gt;",
+ "configs": [
+  {"name": "accuracy", 
+   "class": "ListPreference",
+   "type": "int",
+   "default": "SensorManager.SENSOR_DELAY_NORMAL",
+   "android:default": "3",
+   "android:entries": "@array/light_accuracy",
+   "android:entryValues": "@array/light_accuracy_values",
+   "android:summary": "Select an Accuracy",
+   "android:title": "Sensor Accuracy"
+  }
+ ],
+ "values": [
+  {"name":"lux", 
+   "type":"double"
+  }
+ ]
+}
