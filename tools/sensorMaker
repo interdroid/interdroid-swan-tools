@@ -3,4 +3,4 @@
 DIR=`dirname $0`
 JAVA=/usr/bin/java
 
-$JAVA -classpath $DIR/../bin interdroid.contextdroid.tool.SensorMaker $*
+$JAVA -classpath $DIR/../bin interdroid.swan.tool.SensorMaker $*

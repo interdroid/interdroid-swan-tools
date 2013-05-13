@@ -1,4 +1,4 @@
-package interdroid.contextdroid.tool;
+package interdroid.swan.tool;
 
 import java.io.BufferedInputStream;
 import java.io.File;
