@@ -15,17 +15,17 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 /**
- * This tool takes a sensor description, expressed as a JSON document, and builds a
- * project and code for implementing the sensor.
- *
- * The description you pass to this tool should only include sensor specific fields.
- * Everything else will be added. The schema must be a record schema, and must
- * have a name and namespace. It may optionally include doc and author
- * properties which will be used to construct the javadoc for the
- * generated code.
- *
+ * This tool takes a sensor description, expressed as a JSON document, and
+ * builds a project and code for implementing the sensor.
+ * 
+ * The description you pass to this tool should only include sensor specific
+ * fields. Everything else will be added. The schema must be a record schema,
+ * and must have a name and namespace. It may optionally include doc and author
+ * properties which will be used to construct the javadoc for the generated
+ * code.
+ * 
  * @author nick &lt;palmer@cs.vu.nl&gt;
- *
+ * 
  */
 public class SensorMaker {
 	public static final int ERR_WRONG_ARGS = 1;
@@ -48,25 +48,17 @@ public class SensorMaker {
 	public static final int ERR_WRITING_CLASS = 18;
 
 	private static final String[] ERRORS = { null,
-		"Incorrect number of arguments.",
-		"Schema file does not exist or is unreadable.",
-		"Error parsing the schema:",
-		"Schema must have a namespace.",
-		"Schema must have a name.",
-		"Root schema must be a record.",
-		"Unable to create project directory:",
-		"Error making the project directory:",
-		"Unable to write to project directory:",
-		"File is not writable:",
-		"File is not a file:",
-		"File not found:",
-		"Unable to backup file:",
-		"Error writing arrays.",
-		"Error writing preferences.",
-		"Error parsing schema.",
-		"Error writing the manifest",
-		"Error writing sensor class"
-	};
+			"Incorrect number of arguments.",
+			"Schema file does not exist or is unreadable.",
+			"Error parsing the schema:", "Schema must have a namespace.",
+			"Schema must have a name.", "Root schema must be a record.",
+			"Unable to create project directory:",
+			"Error making the project directory:",
+			"Unable to write to project directory:", "File is not writable:",
+			"File is not a file:", "File not found:", "Unable to backup file:",
+			"Error writing arrays.", "Error writing preferences.",
+			"Error parsing schema.", "Error writing the manifest",
+			"Error writing sensor class" };
 
 	private static final String SRC_DIR = "src";
 	private static final String XML_DIR = "res/xml";
@@ -104,7 +96,8 @@ public class SensorMaker {
 		try {
 			String schema = readFileAsString(schemaFile);
 
-			JSONObject schemaJSON = (JSONObject) new JSONTokener(schema).nextValue();
+			JSONObject schemaJSON = (JSONObject) new JSONTokener(schema)
+					.nextValue();
 
 			generateProject(schemaJSON, schemaFile.getParent());
 		} catch (Exception e) {
@@ -113,7 +106,7 @@ public class SensorMaker {
 	}
 
 	private static String readFileAsString(File file)
-			throws java.io.IOException{
+			throws java.io.IOException {
 		byte[] buffer = new byte[(int) file.length()];
 		BufferedInputStream f = null;
 		try {
@@ -126,8 +119,7 @@ public class SensorMaker {
 			if (f != null) {
 				try {
 					f.close();
-				}
-				catch (IOException ignored) {
+				} catch (IOException ignored) {
 					// Ignored
 				}
 			}
@@ -144,29 +136,33 @@ public class SensorMaker {
 			projectRoot += File.separator;
 		}
 
-		File srcDir = new File(projectRoot  + SRC_DIR);
+		File srcDir = new File(projectRoot + SRC_DIR);
 		mkdir(srcDir);
 
 		File classDir = null;
 		try {
-			classDir = new File(srcDir.getPath()  + File.separator + schema.getString(NAMESPACE).replace('.', File.separatorChar));
+			classDir = new File(srcDir.getPath()
+					+ File.separator
+					+ schema.getString(NAMESPACE).replace('.',
+							File.separatorChar));
 		} catch (JSONException e) {
 			usage(ERR_NO_NAMESPACE, e.getMessage());
 		}
-		mkdir (classDir);
+		mkdir(classDir);
 
-		File xmlDir = new File(projectRoot  + XML_DIR);
+		File xmlDir = new File(projectRoot + XML_DIR);
 		mkdir(xmlDir);
 
-		File valuesDir = new File(projectRoot  + VALUES_DIR);
+		File valuesDir = new File(projectRoot + VALUES_DIR);
 		mkdir(valuesDir);
 
-		File manifest = new File(projectRoot  + MANIFEST_FILE);
+		File manifest = new File(projectRoot + MANIFEST_FILE);
 		generateManifest(schema, manifest);
 
 		File arrays;
 		try {
-			arrays = new File(valuesDir.getPath()  + File.separator + schema.getString(NAME).toLowerCase() + ARRAYS_FILE);
+			arrays = new File(valuesDir.getPath() + File.separator
+					+ schema.getString(NAME).toLowerCase() + ARRAYS_FILE);
 			generateArrays(schema, arrays);
 		} catch (JSONException e) {
 			usage(ERR_NO_NAME, e.getMessage());
@@ -174,7 +170,9 @@ public class SensorMaker {
 
 		File prefs = null;
 		try {
-			prefs = new File(xmlDir + File.separator + schema.getString(NAME).toLowerCase()+ PREFS_FILE_EXTENSION);
+			prefs = new File(xmlDir + File.separator
+					+ schema.getString(NAME).toLowerCase()
+					+ PREFS_FILE_EXTENSION);
 		} catch (JSONException e) {
 			usage(ERR_NO_NAME, e.getMessage());
 		}
@@ -182,7 +180,10 @@ public class SensorMaker {
 
 		File sensor = null;
 		try {
-			sensor = new File(classDir  + File.separator + schema.getString(NAME).substring(0,1).toUpperCase() + schema.getString(NAME).substring(1) + SENSOR_FILE_EXTENSION);
+			sensor = new File(classDir + File.separator
+					+ schema.getString(NAME).substring(0, 1).toUpperCase()
+					+ schema.getString(NAME).substring(1)
+					+ SENSOR_FILE_EXTENSION);
 		} catch (JSONException e) {
 			usage(ERR_NO_NAME, e.getMessage());
 		}
@@ -202,8 +203,8 @@ public class SensorMaker {
 			contents.append(schema.getString(NAMESPACE));
 			contents.append(".R;");
 			contents.append("\n");
-			contents.append("\nimport interdroid.contextdroid.sensors.AbstractConfigurationActivity;");
-			contents.append("\nimport interdroid.contextdroid.sensors.AbstractVdbSensor;");
+			contents.append("\nimport interdroid.swan.sensors.AbstractConfigurationActivity;");
+			contents.append("\nimport interdroid.swan.sensors.AbstractVdbSensor;");
 			contents.append("\nimport interdroid.vdb.content.avro.AvroContentProviderProxy;");
 			contents.append("\n");
 			contents.append("\nimport android.content.ContentValues;");
@@ -226,7 +227,9 @@ public class SensorMaker {
 			}
 			contents.append("\n*/");
 			contents.append("\npublic class ");
-			contents.append(schema.getString(NAME));
+			contents.append(Character.toUpperCase(schema.getString(NAME)
+					.charAt(0))
+					+ schema.getString(NAME).substring(1).toLowerCase());
 			contents.append("Sensor extends AbstractVdbSensor {");
 			contents.append("\n");
 			contents.append("\n\t/**");
@@ -337,7 +340,6 @@ public class SensorMaker {
 
 			}
 
-
 			contents.append("\n\t\t\t+ \"\\n]\"");
 			contents.append("\n\t\t\t+ \"}\";");
 			contents.append("\n\t\treturn scheme.replace('\\'', '\"');");
@@ -374,7 +376,8 @@ public class SensorMaker {
 					JSONObject config = configs.getJSONObject(i);
 					if (config.has(DEFAULT)) {
 						contents.append("\n\t\tdefaults.put");
-						contents.append(config.getString(TYPE).substring(0,1).toUpperCase());
+						contents.append(config.getString(TYPE).substring(0, 1)
+								.toUpperCase());
 						contents.append(config.getString(TYPE).substring(1));
 						contents.append("(");
 						contents.append(config.getString(NAME).toUpperCase());
@@ -419,7 +422,7 @@ public class SensorMaker {
 			contents.append("\n\t\tif (registeredConfigurations.size() > 0) {");
 			contents.append("\n\t\t\t/* Perform sensor specific listener un-registration. */");
 
-			//			contents.append("\nunregisterReceiver(batteryReceiver);");
+			// contents.append("\nunregisterReceiver(batteryReceiver);");
 			contents.append("\n\t\t}");
 			contents.append("\n\t\t/* Perform sensor specific shutdown. */");
 			contents.append("\n\t}");
@@ -482,29 +485,30 @@ public class SensorMaker {
 		OutputStream file = makeFile(prefs);
 		StringBuffer content = new StringBuffer();
 		try {
-			content.append(
-					"<?xml version=\"1.0\" encoding=\"utf-8\"?>" + "\n" +
-							"<PreferenceScreen xmlns:android=\"http://schemas.android.com/apk/res/android\">" + "\n" +
-							"	<PreferenceCategory android:title=\"Value Path\">" + "\n" +
-							"		<ListPreference android:title=\"Value Path\"" + "\n" +
-							"			android:summary=\"Select a Value Path\" android:key=\"valuepath\"" + "\n" +
-							"			android:entries=\"@array/" + schema.getString(NAME) + "_valuepaths\" " +
-							"android:entryValues=\"@array/" + schema.getString(NAME) + "_valuepaths\" />" + "\n" +
-							"	</PreferenceCategory>" + "\n"
-					);
+			content.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+					+ "\n"
+					+ "<PreferenceScreen xmlns:android=\"http://schemas.android.com/apk/res/android\">"
+					+ "\n"
+					+ "	<PreferenceCategory android:title=\"Value Path\">"
+					+ "\n"
+					+ "		<ListPreference android:title=\"Value Path\""
+					+ "\n"
+					+ "			android:summary=\"Select a Value Path\" android:key=\"valuepath\""
+					+ "\n" + "			android:entries=\"@array/"
+					+ schema.getString(NAME) + "_valuepaths\" "
+					+ "android:entryValues=\"@array/" + schema.getString(NAME)
+					+ "_valuepaths\" />" + "\n" + "	</PreferenceCategory>"
+					+ "\n");
 			if (schema.has(CONFIGS)) {
-				content.append(
-						"	<PreferenceCategory android:title=\"Configuration\">"
-						);
+				content.append("	<PreferenceCategory android:title=\"Configuration\">");
 				JSONArray fields = schema.getJSONArray(CONFIGS);
 				for (int i = 0; i < fields.length(); i++) {
 					JSONObject field = fields.getJSONObject(i);
-					// TODO: Break each part into separate appends for efficiency
-					content.append(
-							"\n\t\t<" + field.getString(CLASS));
-					content.append(
-							"\n\t\t\tandroid:key=\"" + field.getString(NAME) +"\""
-							);
+					// TODO: Break each part into separate appends for
+					// efficiency
+					content.append("\n\t\t<" + field.getString(CLASS));
+					content.append("\n\t\t\tandroid:key=\""
+							+ field.getString(NAME) + "\"");
 					String[] names = JSONObject.getNames(field);
 					for (String name : names) {
 						if (name.startsWith("android")) {
@@ -512,15 +516,13 @@ public class SensorMaker {
 							content.append(name);
 							content.append("=\"");
 							content.append(field.getString(name));
-							content.append("\" />");
+							content.append("\"");
 						}
 					}
 					content.append("\n\t\t/>");
 				}
 			}
-			content.append(
-					"\n\t</PreferenceCategory>\n</PreferenceScreen>"
-					);
+			content.append("\n\t</PreferenceCategory>\n</PreferenceScreen>");
 
 			file.write(content.toString().getBytes());
 		} catch (Exception e) {
@@ -532,17 +534,14 @@ public class SensorMaker {
 		OutputStream file = makeFile(arrays);
 
 		try {
-			String header =
-					"<?xml version=\"1.0\" encoding=\"utf-8\"?>" + "\n" +
-							"<resources>" + "\n" +
-							"\n" +
-							"    <!-- " + schema.getString(NAME) + " sensor -->" + "\n" +
-							"    <string-array name=\"" + schema.getString(NAME) + "_valuepaths\">" + "\n";
-			String close =
-					"    </string-array>\n\n";
+			String header = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + "\n"
+					+ "<resources>" + "\n" + "\n" + "    <!-- "
+					+ schema.getString(NAME) + " sensor -->" + "\n"
+					+ "    <string-array name=\"" + schema.getString(NAME)
+					+ "_valuepaths\">" + "\n";
+			String close = "    </string-array>\n\n";
 
-			String footer =
-					 "\n</resources>";
+			String footer = "\n</resources>";
 			String itemOpen = "        <item>";
 			String itemClose = "</item>" + "\n";
 
@@ -583,12 +582,14 @@ public class SensorMaker {
 						JSONArray items = value.getJSONArray(ITEMS);
 						for (int j = 0; j < items.length(); j++) {
 							file.write(itemOpen.getBytes());
-							file.write(String.valueOf(items.getInt(j)).getBytes());
+							file.write(String.valueOf(items.getInt(j))
+									.getBytes());
 							file.write(itemClose.getBytes());
 						}
 						file.write("    </integer-array>\n\n".getBytes());
 					} else {
-						throw new IllegalArgumentException("Unsupported values type: " + type);
+						throw new IllegalArgumentException(
+								"Unsupported values type: " + type);
 					}
 				}
 			}
@@ -626,7 +627,7 @@ public class SensorMaker {
 			// Start the activity
 			contents.append("\n\t\t<activity android:name=\".");
 			contents.append(schema.getString(NAME));
-			contents.append("Sensor$ConfigurationActivity\" />");
+			contents.append("Sensor$ConfigurationActivity\" android:exported=\"true\"/>");
 
 			contents.append("\n");
 
@@ -677,7 +678,7 @@ public class SensorMaker {
 
 			// Include the discovery intent filter
 			contents.append("\n\t\t\t<intent-filter >");
-			contents.append("\n\t\t\t\t<action android:name=\"interdroid.contextdroid.sensor.DISCOVER\" />");
+			contents.append("\n\t\t\t\t<action android:name=\"interdroid.swan.sensor.DISCOVER\" />");
 			contents.append("\n\t\t\t</intent-filter>");
 
 			contents.append("\n");
@@ -727,7 +728,6 @@ public class SensorMaker {
 		}
 	}
 
-
 	private static OutputStream makeFile(File file) {
 		if (file.exists()) {
 			backup(file);
@@ -745,7 +745,6 @@ public class SensorMaker {
 			usage(FILE_NOT_FILE, file.getPath());
 		}
 
-
 		OutputStream out = null;
 		try {
 			out = new FileOutputStream(file);
@@ -757,7 +756,8 @@ public class SensorMaker {
 	}
 
 	private static void backup(File file) {
-		String newName = file.getName() + "." + System.currentTimeMillis() + BACKUP_EXTENSION;
+		String newName = file.getName() + "." + System.currentTimeMillis()
+				+ BACKUP_EXTENSION;
 		File newFile = new File(newName);
 
 		try {
@@ -766,7 +766,7 @@ public class SensorMaker {
 
 			byte[] buf = new byte[1024];
 			int len;
-			while ((len = in.read(buf)) > 0){
+			while ((len = in.read(buf)) > 0) {
 				out.write(buf, 0, len);
 			}
 			in.close();
@@ -779,7 +779,8 @@ public class SensorMaker {
 
 	private static void mkdir(File dir) {
 		if (dir.exists() && !dir.isDirectory()) {
-			usage(ERR_PROJECT_NOT_DIR, "The file: " + dir.getName() + " exists and is not a directory.");
+			usage(ERR_PROJECT_NOT_DIR, "The file: " + dir.getName()
+					+ " exists and is not a directory.");
 		}
 
 		if (!dir.exists() && !dir.mkdirs()) {
