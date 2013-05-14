@@ -105,6 +105,11 @@ public class SensorMaker {
 		}
 	}
 
+	private static String toFirstUpperCase(String string) {
+		return string.substring(0, 1).toUpperCase()
+				+ string.substring(1).toLowerCase();
+	}
+
 	private static String readFileAsString(File file)
 			throws java.io.IOException {
 		byte[] buffer = new byte[(int) file.length()];
@@ -181,8 +186,7 @@ public class SensorMaker {
 		File sensor = null;
 		try {
 			sensor = new File(classDir + File.separator
-					+ schema.getString(NAME).substring(0, 1).toUpperCase()
-					+ schema.getString(NAME).substring(1)
+					+ toFirstUpperCase(schema.getString(NAME))
 					+ SENSOR_FILE_EXTENSION);
 		} catch (JSONException e) {
 			usage(ERR_NO_NAME, e.getMessage());
@@ -227,9 +231,7 @@ public class SensorMaker {
 			}
 			contents.append("\n*/");
 			contents.append("\npublic class ");
-			contents.append(Character.toUpperCase(schema.getString(NAME)
-					.charAt(0))
-					+ schema.getString(NAME).substring(1).toLowerCase());
+			contents.append(toFirstUpperCase(schema.getString(NAME)));
 			contents.append("Sensor extends AbstractVdbSensor {");
 			contents.append("\n");
 			contents.append("\n\t/**");
@@ -318,7 +320,7 @@ public class SensorMaker {
 			contents.append(schema.getString(NAME));
 			contents.append("', \"");
 			contents.append("\n\t\t\t+ \"'namespace': '");
-			contents.append(schema.getString(NAMESPACE));
+			contents.append(schema.getString(NAMESPACE) + "." + schema.getString(NAME));
 			contents.append("',\"");
 			contents.append("\n\t\t\t+ \"\\n'fields': [\"");
 			contents.append("\n\t\t\t+ SCHEMA_TIMESTAMP_FIELDS");
@@ -376,9 +378,7 @@ public class SensorMaker {
 					JSONObject config = configs.getJSONObject(i);
 					if (config.has(DEFAULT)) {
 						contents.append("\n\t\tdefaults.put");
-						contents.append(config.getString(TYPE).substring(0, 1)
-								.toUpperCase());
-						contents.append(config.getString(TYPE).substring(1));
+						contents.append(toFirstUpperCase(config.getString(TYPE)));
 						contents.append("(");
 						contents.append(config.getString(NAME).toUpperCase());
 						contents.append("_CONFIG");
@@ -626,7 +626,7 @@ public class SensorMaker {
 
 			// Start the activity
 			contents.append("\n\t\t<activity android:name=\".");
-			contents.append(schema.getString(NAME));
+			contents.append(toFirstUpperCase(schema.getString(NAME)));
 			contents.append("Sensor$ConfigurationActivity\" android:exported=\"true\"/>");
 
 			contents.append("\n");
@@ -635,7 +635,7 @@ public class SensorMaker {
 			contents.append("\n\t\t<service");
 			contents.append("\n\t\t\tandroid:exported=\"true\"");
 			contents.append("\n\t\t\tandroid:name=\".");
-			contents.append(schema.getString(NAME));
+			contents.append(toFirstUpperCase(schema.getString(NAME)));
 			contents.append("Sensor\" >");
 
 			contents.append("\n");
@@ -698,7 +698,7 @@ public class SensorMaker {
 			contents.append("\n\t\t\tandroid:name=\"");
 			contents.append(schema.getString(NAMESPACE));
 			contents.append('.');
-			contents.append(schema.getString(NAME));
+			contents.append(toFirstUpperCase(schema.getString(NAME)));
 			contents.append("Sensor$Provider\" />");
 
 			contents.append("\n");
