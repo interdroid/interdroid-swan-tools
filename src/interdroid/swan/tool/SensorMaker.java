@@ -252,23 +252,21 @@ public class SensorMaker {
 
 			// Declare constants for all the configs.
 			if (schema.has(CONFIGS)) {
-				if (schema.has(CONFIGS)) {
-					JSONArray configs = schema.getJSONArray(CONFIGS);
-					for (int i = 0; i < configs.length(); i++) {
-						JSONObject config = configs.getJSONObject(i);
+				JSONArray configs = schema.getJSONArray(CONFIGS);
+				for (int i = 0; i < configs.length(); i++) {
+					JSONObject config = configs.getJSONObject(i);
 
-						contents.append("\n\t/**");
-						contents.append("\n\t* The ");
-						contents.append(config.getString(NAME));
-						contents.append(" configuration.");
-						contents.append("\n\t*/");
-						contents.append("\n\tpublic static final String ");
-						contents.append(config.getString(NAME).toUpperCase());
-						contents.append("_CONFIG = \"");
-						contents.append(config.getString(NAME));
-						contents.append("\";");
-						contents.append("\n");
-					}
+					contents.append("\n\t/**");
+					contents.append("\n\t* The ");
+					contents.append(config.getString(NAME));
+					contents.append(" configuration.");
+					contents.append("\n\t*/");
+					contents.append("\n\tpublic static final String ");
+					contents.append(config.getString(NAME).toUpperCase());
+					contents.append("_CONFIG = \"");
+					contents.append(config.getString(NAME));
+					contents.append("\";");
+					contents.append("\n");
 				}
 			}
 
@@ -320,7 +318,8 @@ public class SensorMaker {
 			contents.append(schema.getString(NAME));
 			contents.append("', \"");
 			contents.append("\n\t\t\t+ \"'namespace': '");
-			contents.append(schema.getString(NAMESPACE) + "." + schema.getString(NAME));
+			contents.append(schema.getString(NAMESPACE) + "."
+					+ schema.getString(NAME));
 			contents.append("',\"");
 			contents.append("\n\t\t\t+ \"\\n'fields': [\"");
 			contents.append("\n\t\t\t+ SCHEMA_TIMESTAMP_FIELDS");
@@ -663,7 +662,7 @@ public class SensorMaker {
 				}
 				contents.append(fields.getJSONObject(i).getString(NAME));
 			}
-			contents.append("\" />");
+			contents.append("\" />\n");
 
 			// Include the authority meta-data
 			contents.append("\n\t\t\t\t<meta-data");
@@ -672,9 +671,33 @@ public class SensorMaker {
 			contents.append(schema.getString(NAMESPACE));
 			contents.append('.');
 			contents.append(schema.getString(NAME));
-			contents.append("\" />");
+			contents.append("\" />\n");
 
-			contents.append("\n");
+			// Include the configurations and default values
+			if (schema.has(CONFIGS)) {
+				JSONArray configs = schema.getJSONArray(CONFIGS);
+				for (int i = 0; i < configs.length(); i++) {
+					JSONObject config = configs.getJSONObject(i);
+					contents.append("\n\t\t\t\t<meta-data");
+					contents.append("\n\t\t\t\t\tandroid:name=\""
+							+ config.get("name") + "\"");
+					if (config.has("default")) {
+						contents.append("\n\t\t\t\t\tandroid:value=\""
+								+ config.get("default"));
+						if (config.has("type")) {
+							if (config.get("type").equals("long")) {
+								contents.append("L");
+							} else if (config.get("type").equals("double")) {
+								contents.append("D");
+							}
+						}
+						contents.append("\" />");
+					} else {
+						contents.append("\n\t\t\t\t\tandroid:value=\"null\" />");
+					}
+					contents.append("\n");
+				}
+			}
 
 			// Include the discovery intent filter
 			contents.append("\n\t\t\t<intent-filter >");
