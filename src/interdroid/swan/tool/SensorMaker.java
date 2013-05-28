@@ -46,6 +46,7 @@ public class SensorMaker {
 	public static final int ERR_SCHEMA_PARSE = 16;
 	public static final int ERR_WRITING_MANIFEST = 17;
 	public static final int ERR_WRITING_CLASS = 18;
+	public static final int ERR_WRITING_CLASS_IMPL = 19;
 
 	private static final String[] ERRORS = { null,
 			"Incorrect number of arguments.",
@@ -58,7 +59,8 @@ public class SensorMaker {
 			"File is not a file:", "File not found:", "Unable to backup file:",
 			"Error writing arrays.", "Error writing preferences.",
 			"Error parsing schema.", "Error writing the manifest",
-			"Error writing sensor class" };
+			"Error writing sensor class",
+			"Error writing sensor implementation class" };
 
 	private static final String SRC_DIR = "src";
 	private static final String XML_DIR = "res/xml";
@@ -68,6 +70,7 @@ public class SensorMaker {
 	private static final String PREFS_FILE_EXTENSION = "_preferences.xml";
 	private static final String ARRAYS_FILE = "_values.xml";
 	private static final String SENSOR_FILE_EXTENSION = "Sensor.java";
+	private static final String POLLER_FILE_EXTENSION = "Poller.java";
 	private static final String BACKUP_EXTENSION = ".bak";
 
 	private static final int MIN_ARGS = 1;
@@ -84,6 +87,7 @@ public class SensorMaker {
 	private static final String VALUES = "values";
 	private static final String ITEMS = "items";
 	private static final String DEFAULT = "default";
+	private static final String CUCKOO = "cuckoo";
 
 	public static void main(String[] args) {
 		if (args.length < MIN_ARGS || args.length > MAX_ARGS) {
@@ -192,10 +196,25 @@ public class SensorMaker {
 			usage(ERR_NO_NAME, e.getMessage());
 		}
 		generateSensor(schema, sensor);
+		try {
+			if (schema.has(CUCKOO) && schema.getBoolean(CUCKOO)) {
+				File poller = null;
+				try {
+					poller = new File(classDir + File.separator
+							+ toFirstUpperCase(schema.getString(NAME))
+							+ POLLER_FILE_EXTENSION);
+				} catch (JSONException e) {
+					usage(ERR_NO_NAME, e.getMessage());
+				}
+				generatePoller(schema, poller);
+			}
+		} catch (JSONException e) {
+			// ignore...
+		}
 	}
 
-	private static void generateSensor(JSONObject schema, File sensor) {
-		OutputStream file = makeFile(sensor);
+	private static void generatePoller(JSONObject schema, File poller) {
+		OutputStream file = makeFile(poller);
 		StringBuffer contents = new StringBuffer();
 
 		try {
@@ -203,16 +222,9 @@ public class SensorMaker {
 			contents.append(schema.getString(NAMESPACE));
 			contents.append(";");
 			contents.append("\n");
-			contents.append("\nimport ");
-			contents.append(schema.getString(NAMESPACE));
-			contents.append(".R;");
-			contents.append("\n");
-			contents.append("\nimport interdroid.swan.sensors.AbstractConfigurationActivity;");
-			contents.append("\nimport interdroid.swan.sensors.AbstractVdbSensor;");
-			contents.append("\nimport interdroid.vdb.content.avro.AvroContentProviderProxy;");
-			contents.append("\n");
-			contents.append("\nimport android.content.ContentValues;");
-			contents.append("\nimport android.os.Bundle;");
+			contents.append("\nimport interdroid.swan.cuckoo_sensors.CuckooPoller;");
+			contents.append("\nimport java.util.Map;");
+			contents.append("\nimport java.util.HashMap;");
 			contents.append("\n");
 			contents.append("\n/**");
 			if (schema.has(DOC)) {
@@ -232,7 +244,128 @@ public class SensorMaker {
 			contents.append("\n*/");
 			contents.append("\npublic class ");
 			contents.append(toFirstUpperCase(schema.getString(NAME)));
-			contents.append("Sensor extends AbstractVdbSensor {");
+			contents.append("Poller implements CuckooPoller {");
+			contents.append("\n");
+			// Declare constants for all the configs.
+			if (schema.has(CONFIGS)) {
+				JSONArray configs = schema.getJSONArray(CONFIGS);
+				for (int i = 0; i < configs.length(); i++) {
+					JSONObject config = configs.getJSONObject(i);
+
+					contents.append("\n\t/**");
+					contents.append("\n\t* The ");
+					contents.append(config.getString(NAME));
+					contents.append(" configuration.");
+					contents.append("\n\t*/");
+					contents.append("\n\tpublic static final String ");
+					contents.append(config.getString(NAME).toUpperCase());
+					contents.append("_CONFIG = \"");
+					contents.append(config.getString(NAME));
+					contents.append("\";");
+					contents.append("\n");
+				}
+			}
+
+			// Declare constants for all the fields.
+			JSONArray fields = schema.getJSONArray(VALUE_PATHS);
+			for (int i = 0; i < fields.length(); i++) {
+				JSONObject field = fields.getJSONObject(i);
+
+				contents.append("\n\t/**");
+				contents.append("\n\t* The ");
+				contents.append(field.getString(NAME));
+				contents.append(" field.");
+				contents.append("\n\t*/");
+				contents.append("\n\tpublic static final String ");
+				contents.append(field.getString(NAME).toUpperCase());
+				contents.append("_FIELD = \"");
+				contents.append(field.getString(NAME));
+				contents.append("\";");
+				contents.append("\n");
+
+			}
+			contents.append("\n\t@Override");
+			contents.append("\n\tpublic Map<String, Object> poll(String valuePath,");
+			contents.append("\n\t\tMap<String, Object> configuration) {");
+			contents.append("\n\t\tMap<String, Object> result = new HashMap<String, Object>();");
+			contents.append("\n\t\t// put your polling code here");
+			contents.append("\n\t\treturn result;");
+			contents.append("\n\t}");
+			contents.append("\n");
+			contents.append("\n\t@Override");
+			contents.append("\n\tpublic long getInterval(Map<String, Object> configuration, boolean remote) {");
+			contents.append("\n\t\tif (remote) {");
+			contents.append("\n\t\t\tthrow new java.lang.RuntimeException(\"return the remote interval here\");");
+			contents.append("\n\t\t} else {");
+			contents.append("\n\t\t\tthrow new java.lang.RuntimeException(\"return the local interval here\");");
+			contents.append("\n\t\t}");
+			contents.append("\n\t}");
+			contents.append("\n}");
+			file.write(contents.toString().getBytes());
+		} catch (Exception e) {
+			usage(ERR_WRITING_CLASS, e.getMessage());
+		}
+
+	}
+
+	private static void generateSensor(JSONObject schema, File sensor) {
+		OutputStream file = makeFile(sensor);
+		StringBuffer contents = new StringBuffer();
+
+		try {
+			contents.append("package ");
+			contents.append(schema.getString(NAMESPACE));
+			contents.append(";");
+			contents.append("\n");
+			contents.append("\nimport ");
+			contents.append(schema.getString(NAMESPACE));
+			contents.append(".R;");
+			contents.append("\n");
+			contents.append("\nimport interdroid.swan.sensors.AbstractConfigurationActivity;");
+			if (schema.has(CUCKOO) && schema.getBoolean(CUCKOO)) {
+				contents.append("\nimport interdroid.swan.sensors.AbstractCuckooSensor;");
+			} else {
+				contents.append("\nimport interdroid.swan.sensors.AbstractVdbSensor;");
+			}
+
+			contents.append("\nimport interdroid.vdb.content.avro.AvroContentProviderProxy; // link to android library: vdb-avro");
+			contents.append("\n");
+			contents.append("\nimport android.content.ContentValues;");
+			contents.append("\nimport android.os.Bundle;");
+			if (schema.has(CUCKOO) && schema.getBoolean(CUCKOO)) {
+				contents.append("\nimport android.app.Activity;");
+				contents.append("\nimport android.util.Log;");
+				contents.append("\nimport interdroid.swan.cuckoo_sensors.CuckooPoller;");
+				contents.append("\nimport android.content.BroadcastReceiver;");
+				contents.append("\nimport android.content.Context;");
+				contents.append("\nimport android.content.Intent;");
+				contents.append("\nimport android.content.IntentFilter;");
+				contents.append("\nimport com.google.android.gms.gcm.GoogleCloudMessaging; // link to android library: google-play-services_lib");
+			}
+			contents.append("\n");
+			contents.append("\n/**");
+			if (schema.has(DOC)) {
+				contents.append("\n* ");
+				contents.append(schema.getString(DOC));
+			} else {
+				contents.append("\n* The ");
+				contents.append(schema.getString(NAME));
+				contents.append(" Sensor Implementation.");
+			}
+			contents.append("\n*");
+			if (schema.has(AUTHOR)) {
+				contents.append("\n* @author ");
+				contents.append(schema.getString(AUTHOR));
+				contents.append("\n*");
+			}
+			contents.append("\n*/");
+			contents.append("\npublic class ");
+			contents.append(toFirstUpperCase(schema.getString(NAME)));
+			if (schema.has(CUCKOO) && schema.getBoolean(CUCKOO)) {
+				contents.append("Sensor extends AbstractCuckooSensor {");
+			} else {
+				contents.append("Sensor extends AbstractVdbSensor {");
+			}
 			contents.append("\n");
 			contents.append("\n\t/**");
 			contents.append("\n\t* The configuration activity for this sensor.");
@@ -396,35 +529,38 @@ public class SensorMaker {
 			contents.append("\n\t\treturn SCHEME;");
 			contents.append("\n\t}");
 			contents.append("\n");
-			contents.append("\n\t@Override");
-			contents.append("\n\tpublic void onConnected() {");
-			contents.append("\n\t\t/* Perform sensor specific sensor setup. */");
-			contents.append("\n\t}");
-			contents.append("\n");
-			contents.append("\n\t@Override");
-			contents.append("\n\tpublic final void register(final String id, final String valuePath,");
-			contents.append("\n\t\tfinal Bundle configuration) {");
-			contents.append("\n\t\tif (registeredConfigurations.size() == 1) {");
-			contents.append("\n\t\t\t/* Perform sensor specific listener registration. */");
-			contents.append("\n\t\t}");
-			contents.append("\n\t}");
-			contents.append("\n");
-			contents.append("\n\t@Override");
-			contents.append("\n\tpublic final void unregister(final String id) {");
-			contents.append("\n\t\tif (registeredConfigurations.size() == 0) {");
-			contents.append("\n\t\t\t/* Perform sensor specific listener un-registration. */");
-			contents.append("\n\t\t}");
-			contents.append("\n\t}");
-			contents.append("\n");
-			contents.append("\n\t@Override");
-			contents.append("\n\tpublic final void onDestroySensor() {");
-			contents.append("\n\t\tif (registeredConfigurations.size() > 0) {");
-			contents.append("\n\t\t\t/* Perform sensor specific listener un-registration. */");
+			if (schema.has(CUCKOO) && schema.getBoolean(CUCKOO)) {
 
-			// contents.append("\nunregisterReceiver(batteryReceiver);");
-			contents.append("\n\t\t}");
-			contents.append("\n\t\t/* Perform sensor specific shutdown. */");
-			contents.append("\n\t}");
+			} else {
+				contents.append("\n\t@Override");
+				contents.append("\n\tpublic void onConnected() {");
+				contents.append("\n\t\t/* Perform sensor specific sensor setup. */");
+				contents.append("\n\t}");
+				contents.append("\n");
+				contents.append("\n\t@Override");
+				contents.append("\n\tpublic final void register(final String id, final String valuePath,");
+				contents.append("\n\t\tfinal Bundle configuration) {");
+				contents.append("\n\t\tif (registeredConfigurations.size() == 1) {");
+				contents.append("\n\t\t\t/* Perform sensor specific listener registration. */");
+				contents.append("\n\t\t}");
+				contents.append("\n\t}");
+				contents.append("\n");
+				contents.append("\n\t@Override");
+				contents.append("\n\tpublic final void unregister(final String id) {");
+				contents.append("\n\t\tif (registeredConfigurations.size() == 0) {");
+				contents.append("\n\t\t\t/* Perform sensor specific listener un-registration. */");
+				contents.append("\n\t\t}");
+				contents.append("\n\t}");
+				contents.append("\n");
+				contents.append("\n\t@Override");
+				contents.append("\n\tpublic final void onDestroySensor() {");
+				contents.append("\n\t\tif (registeredConfigurations.size() > 0) {");
+				contents.append("\n\t\t\t/* Perform sensor specific listener un-registration. */");
+				// contents.append("\nunregisterReceiver(batteryReceiver);");
+				contents.append("\n\t\t}");
+				contents.append("\n\t\t/* Perform sensor specific shutdown. */");
+				contents.append("\n\t}");
+			}
 			contents.append("\n");
 
 			// Make a convenience method to store the data
@@ -470,7 +606,58 @@ public class SensorMaker {
 			contents.append("\n\t* =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
 			contents.append("\n\t*/");
 			contents.append("\n");
+			contents.append("\n\t@Override");
+			contents.append("\n\tpublic final CuckooPoller getPoller() {");
+			contents.append("\n\t\treturn new "
+					+ toFirstUpperCase(schema.getString(NAME)) + "Poller();");
+			contents.append("\n\t}");
 			contents.append("\n");
+			contents.append("\n\t@Override");
+			contents.append("\n\tpublic String getGCMSenderId() {");
+			contents.append("\n\t\tthrow new java.lang.RuntimeException(\"<put your gcm project id here>\");");
+			contents.append("\n\t}");
+			contents.append("\n");
+			contents.append("\n\t@Override");
+			contents.append("\n\tpublic String getGCMApiKey() {");
+			contents.append("\n\t\tthrow new java.lang.RuntimeException(\"<put your gcm api key here>\");");
+			contents.append("\n\t}");
+			contents.append("\n");
+			contents.append("\n\tpublic void registerReceiver() {");
+			contents.append("\n\t\tIntentFilter filter = new IntentFilter(\"com.google.android.c2dm.intent.RECEIVE\");");
+			contents.append("\n\t\tfilter.addCategory(getPackageName());");
+
+			contents.append("\n\t\tregisterReceiver(new BroadcastReceiver() {");
+
+			contents.append("\n\t\t\tprivate static final String TAG = \""
+					+ schema.getString(NAME) + "SensorReceiver\";");
+			contents.append("\n");
+			contents.append("\n\t\t\t@Override");
+			contents.append("\n\t\t\tpublic void onReceive(Context context, Intent intent) {");
+			contents.append("\n\t\t\t\tGoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(context);");
+			contents.append("\n\t\t\t\tString messageType = gcm.getMessageType(intent);");
+			contents.append("\n\t\t\t\tif (GoogleCloudMessaging.MESSAGE_TYPE_SEND_ERROR");
+			contents.append("\n\t\t\t\t\t\t.equals(messageType)) {");
+			contents.append("\n\t\t\t\t\tLog.d(TAG, \"Received update but encountered send error.\");");
+			contents.append("\n\t\t\t\t} else if (GoogleCloudMessaging.MESSAGE_TYPE_DELETED");
+			contents.append("\n\t\t\t\t\t\t.equals(messageType)) {");
+			contents.append("\n\t\t\t\t\tLog.d(TAG, \"Messages were deleted at the server.\");");
+			contents.append("\n\t\t\t\t} else {");
+			for (int i = 0; i < fields.length(); i++) {
+				JSONObject field = fields.getJSONObject(i);
+				contents.append("\n\t\t\t\t\tif (intent.hasExtra("
+						+ field.getString(NAME).toUpperCase() + "_FIELD"
+						+ ")) {");
+				contents.append("\n\t\t\t\t\t\tstoreReading(intent.getExtras().get"
+						+ toFirstUpperCase(field.getString(TYPE))
+						+ "(\""
+						+ field.getString(NAME) + "\"));");
+				contents.append("\n\t\t\t\t\t}");
+			}
+			contents.append("\n\t\t\t\t}");
+			contents.append("\n\t\t\t\tsetResultCode(Activity.RESULT_OK);");
+			contents.append("\n\t\t\t}");
+			contents.append("\n\t}, filter, \"com.google.android.c2dm.permission.SEND\", null);");
+			contents.append("\n\t}");
 			contents.append("\n}");
 
 			file.write(contents.toString().getBytes());
@@ -741,6 +928,20 @@ public class SensorMaker {
 			contents.append("\n\t<uses-permission android:name=\"interdroid.vdb.permission.WRITE_DATABASE\" />");
 
 			contents.append("\n");
+
+			if (schema.has(CUCKOO) && schema.getBoolean(CUCKOO)) {
+				contents.append("\n\t<!-- Start Permissions needed for Communication Offloading with Cuckoo -->");
+				contents.append("\n\t<uses-permission android:name=\"android.permission.INTERNET\" />");
+				contents.append("\n\t<uses-permission android:name=\"android.permission.GET_ACCOUNTS\" />");
+				contents.append("\n\t<uses-permission android:name=\"com.google.android.c2dm.permission.RECEIVE\" />");
+				contents.append("\n\t<permission android:name=\""
+						+ schema.getString(NAMESPACE)
+						+ ".permission.C2D_MESSAGE\" android:protectionLevel=\"signature\" />");
+				contents.append("\n\t<uses-permission android:name=\""
+						+ schema.getString(NAMESPACE)
+						+ ".permission.C2D_MESSAGE\" />");
+				contents.append("\n\t<!-- End Permissions needed for Communication Offloading with Cuckoo -->");
+			}
 
 			// Finish off the manifest
 			contents.append("\n</manifest>");
