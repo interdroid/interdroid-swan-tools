@@ -81,6 +81,8 @@ public class SensorMaker {
 	private static final String NAME = "name";
 	private static final String CLASS = "class";
 	private static final String VALUE_PATHS = "valuePaths";
+	private static final String UNITS = "units";
+	private static final String UNIT = "unit";
 	private static final String DOC = "doc";
 	private static final String AUTHOR = "author";
 	private static final String TYPE = "type";
@@ -515,7 +517,15 @@ public class SensorMaker {
 						contents.append(config.getString(NAME).toUpperCase());
 						contents.append("_CONFIG");
 						contents.append(", ");
-						contents.append(config.getString(DEFAULT));
+						if (toFirstUpperCase(config.getString(TYPE)).equals(
+								"String")) {
+							contents.append("\"");
+							contents.append(config.getString(DEFAULT));
+							contents.append("\"");
+						} else {
+							contents.append(config.getString(DEFAULT));
+						}
+
 						contents.append(");");
 					}
 				}
@@ -606,58 +616,62 @@ public class SensorMaker {
 			contents.append("\n\t* =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
 			contents.append("\n\t*/");
 			contents.append("\n");
-			contents.append("\n\t@Override");
-			contents.append("\n\tpublic final CuckooPoller getPoller() {");
-			contents.append("\n\t\treturn new "
-					+ toFirstUpperCase(schema.getString(NAME)) + "Poller();");
-			contents.append("\n\t}");
-			contents.append("\n");
-			contents.append("\n\t@Override");
-			contents.append("\n\tpublic String getGCMSenderId() {");
-			contents.append("\n\t\tthrow new java.lang.RuntimeException(\"<put your gcm project id here>\");");
-			contents.append("\n\t}");
-			contents.append("\n");
-			contents.append("\n\t@Override");
-			contents.append("\n\tpublic String getGCMApiKey() {");
-			contents.append("\n\t\tthrow new java.lang.RuntimeException(\"<put your gcm api key here>\");");
-			contents.append("\n\t}");
-			contents.append("\n");
-			contents.append("\n\tpublic void registerReceiver() {");
-			contents.append("\n\t\tIntentFilter filter = new IntentFilter(\"com.google.android.c2dm.intent.RECEIVE\");");
-			contents.append("\n\t\tfilter.addCategory(getPackageName());");
+			if (schema.has(CUCKOO) && schema.getBoolean(CUCKOO)) {
+				contents.append("\n\t@Override");
 
-			contents.append("\n\t\tregisterReceiver(new BroadcastReceiver() {");
+				contents.append("\n\tpublic final CuckooPoller getPoller() {");
+				contents.append("\n\t\treturn new "
+						+ toFirstUpperCase(schema.getString(NAME))
+						+ "Poller();");
+				contents.append("\n\t}");
+				contents.append("\n");
+				contents.append("\n\t@Override");
+				contents.append("\n\tpublic String getGCMSenderId() {");
+				contents.append("\n\t\tthrow new java.lang.RuntimeException(\"<put your gcm project id here>\");");
+				contents.append("\n\t}");
+				contents.append("\n");
+				contents.append("\n\t@Override");
+				contents.append("\n\tpublic String getGCMApiKey() {");
+				contents.append("\n\t\tthrow new java.lang.RuntimeException(\"<put your gcm api key here>\");");
+				contents.append("\n\t}");
+				contents.append("\n");
+				contents.append("\n\tpublic void registerReceiver() {");
+				contents.append("\n\t\tIntentFilter filter = new IntentFilter(\"com.google.android.c2dm.intent.RECEIVE\");");
+				contents.append("\n\t\tfilter.addCategory(getPackageName());");
 
-			contents.append("\n\t\t\tprivate static final String TAG = \""
-					+ schema.getString(NAME) + "SensorReceiver\";");
-			contents.append("\n");
-			contents.append("\n\t\t\t@Override");
-			contents.append("\n\t\t\tpublic void onReceive(Context context, Intent intent) {");
-			contents.append("\n\t\t\t\tGoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(context);");
-			contents.append("\n\t\t\t\tString messageType = gcm.getMessageType(intent);");
-			contents.append("\n\t\t\t\tif (GoogleCloudMessaging.MESSAGE_TYPE_SEND_ERROR");
-			contents.append("\n\t\t\t\t\t\t.equals(messageType)) {");
-			contents.append("\n\t\t\t\t\tLog.d(TAG, \"Received update but encountered send error.\");");
-			contents.append("\n\t\t\t\t} else if (GoogleCloudMessaging.MESSAGE_TYPE_DELETED");
-			contents.append("\n\t\t\t\t\t\t.equals(messageType)) {");
-			contents.append("\n\t\t\t\t\tLog.d(TAG, \"Messages were deleted at the server.\");");
-			contents.append("\n\t\t\t\t} else {");
-			for (int i = 0; i < fields.length(); i++) {
-				JSONObject field = fields.getJSONObject(i);
-				contents.append("\n\t\t\t\t\tif (intent.hasExtra("
-						+ field.getString(NAME).toUpperCase() + "_FIELD"
-						+ ")) {");
-				contents.append("\n\t\t\t\t\t\tstoreReading(intent.getExtras().get"
-						+ toFirstUpperCase(field.getString(TYPE))
-						+ "(\""
-						+ field.getString(NAME) + "\"));");
-				contents.append("\n\t\t\t\t\t}");
+				contents.append("\n\t\tregisterReceiver(new BroadcastReceiver() {");
+
+				contents.append("\n\t\t\tprivate static final String TAG = \""
+						+ schema.getString(NAME) + "SensorReceiver\";");
+				contents.append("\n");
+				contents.append("\n\t\t\t@Override");
+				contents.append("\n\t\t\tpublic void onReceive(Context context, Intent intent) {");
+				contents.append("\n\t\t\t\tGoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(context);");
+				contents.append("\n\t\t\t\tString messageType = gcm.getMessageType(intent);");
+				contents.append("\n\t\t\t\tif (GoogleCloudMessaging.MESSAGE_TYPE_SEND_ERROR");
+				contents.append("\n\t\t\t\t\t\t.equals(messageType)) {");
+				contents.append("\n\t\t\t\t\tLog.d(TAG, \"Received update but encountered send error.\");");
+				contents.append("\n\t\t\t\t} else if (GoogleCloudMessaging.MESSAGE_TYPE_DELETED");
+				contents.append("\n\t\t\t\t\t\t.equals(messageType)) {");
+				contents.append("\n\t\t\t\t\tLog.d(TAG, \"Messages were deleted at the server.\");");
+				contents.append("\n\t\t\t\t} else {");
+				for (int i = 0; i < fields.length(); i++) {
+					JSONObject field = fields.getJSONObject(i);
+					contents.append("\n\t\t\t\t\tif (intent.hasExtra("
+							+ field.getString(NAME).toUpperCase() + "_FIELD"
+							+ ")) {");
+					contents.append("\n\t\t\t\t\t\tstoreReading(intent.getExtras().get"
+							+ toFirstUpperCase(field.getString(TYPE))
+							+ "(\""
+							+ field.getString(NAME) + "\"));");
+					contents.append("\n\t\t\t\t\t}");
+				}
+				contents.append("\n\t\t\t\t}");
+				contents.append("\n\t\t\t\tsetResultCode(Activity.RESULT_OK);");
+				contents.append("\n\t\t\t}");
+				contents.append("\n\t}, filter, \"com.google.android.c2dm.permission.SEND\", null);");
+				contents.append("\n\t}");
 			}
-			contents.append("\n\t\t\t\t}");
-			contents.append("\n\t\t\t\tsetResultCode(Activity.RESULT_OK);");
-			contents.append("\n\t\t\t}");
-			contents.append("\n\t}, filter, \"com.google.android.c2dm.permission.SEND\", null);");
-			contents.append("\n\t}");
 			contents.append("\n}");
 
 			file.write(contents.toString().getBytes());
@@ -813,16 +827,7 @@ public class SensorMaker {
 			// Start the activity
 			contents.append("\n\t\t<activity android:name=\".");
 			contents.append(toFirstUpperCase(schema.getString(NAME)));
-			contents.append("Sensor$ConfigurationActivity\" android:exported=\"true\"/>");
-
-			contents.append("\n");
-
-			// Start the service
-			contents.append("\n\t\t<service");
-			contents.append("\n\t\t\tandroid:exported=\"true\"");
-			contents.append("\n\t\t\tandroid:name=\".");
-			contents.append(toFirstUpperCase(schema.getString(NAME)));
-			contents.append("Sensor\" >");
+			contents.append("Sensor$ConfigurationActivity\" android:exported=\"true\">");
 
 			contents.append("\n");
 
@@ -848,6 +853,44 @@ public class SensorMaker {
 					first = false;
 				}
 				contents.append(fields.getJSONObject(i).getString(NAME));
+			}
+			contents.append("\" />\n");
+
+			// Include the units meta-data
+			contents.append("\n\t\t\t\t<meta-data");
+			contents.append("\n\t\t\t\t\tandroid:name=\"units\"");
+			contents.append("\n\t\t\t\t\tandroid:value=\"");
+
+			if (schema.has(UNITS)) {
+				JSONArray units = schema.getJSONArray(UNITS);
+				first = true;
+				for (int i = 0; i < fields.length(); i++) {
+					if (!first && i < fields.length() - 1) {
+						contents.append(",");
+					} else {
+						first = false;
+					}
+					String unit = "";
+					for (int j = 0; j < units.length(); j++) {
+						if (units
+								.getJSONObject(j)
+								.getString(NAME)
+								.equals(fields.getJSONObject(i).getString(NAME))) {
+							unit = units.getJSONObject(j).getString(UNIT);
+							break;
+						}
+					}
+					contents.append(unit);
+				}
+			} else {
+				for (int i = 0; i < fields.length(); i++) {
+					if (!first && i < fields.length() - 1) {
+						contents.append(",");
+					} else {
+						first = false;
+					}
+					contents.append("");
+				}
 			}
 			contents.append("\" />\n");
 
@@ -892,6 +935,17 @@ public class SensorMaker {
 			contents.append("\n\t\t\t</intent-filter>");
 
 			contents.append("\n");
+
+			contents.append("\n\t\t</activity>");
+
+			contents.append("\n");
+
+			// Start the service
+			contents.append("\n\t\t<service");
+			contents.append("\n\t\t\tandroid:exported=\"true\"");
+			contents.append("\n\t\t\tandroid:name=\".");
+			contents.append(toFirstUpperCase(schema.getString(NAME)));
+			contents.append("Sensor\" >");
 
 			// Finishes off the service
 			contents.append("\n\t\t</service>");
