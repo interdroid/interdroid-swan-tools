@@ -818,7 +818,6 @@ public class SensorMaker {
 
 			// Start the application
 			contents.append("\n\t<application");
-			contents.append("\n\tandroid:debuggable=\"true\"");
 			contents.append("\n\tandroid:icon=\"@drawable/ic_launcher\"");
 			contents.append("\n\tandroid:label=\"@string/app_name\" >");
 
@@ -847,7 +846,7 @@ public class SensorMaker {
 			JSONArray fields = schema.getJSONArray(VALUE_PATHS);
 			boolean first = true;
 			for (int i = 0; i < fields.length(); i++) {
-				if (!first && i < fields.length() - 1) {
+				if (!first) {
 					contents.append(",");
 				} else {
 					first = false;
@@ -860,12 +859,12 @@ public class SensorMaker {
 			contents.append("\n\t\t\t\t<meta-data");
 			contents.append("\n\t\t\t\t\tandroid:name=\"units\"");
 			contents.append("\n\t\t\t\t\tandroid:value=\"");
+			first = true;
 
 			if (schema.has(UNITS)) {
 				JSONArray units = schema.getJSONArray(UNITS);
-				first = true;
 				for (int i = 0; i < fields.length(); i++) {
-					if (!first && i < fields.length() - 1) {
+					if (!first) {
 						contents.append(",");
 					} else {
 						first = false;
@@ -884,7 +883,7 @@ public class SensorMaker {
 				}
 			} else {
 				for (int i = 0; i < fields.length(); i++) {
-					if (!first && i < fields.length() - 1) {
+					if (!first) {
 						contents.append(",");
 					} else {
 						first = false;
